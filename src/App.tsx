@@ -4,15 +4,14 @@ import { Header } from './components/Header';
 import { EvidenceInput } from './components/EvidenceInput';
 import { AnalysisResultView } from './components/AnalysisResultView';
 import { FeedbackModal } from './components/FeedbackModal';
+import { BlacklistLookupModal } from './components/BlacklistLookupModal';
+import { EmergencyHotlinesModal } from './components/EmergencyHotlinesModal';
+import { ReportExportModal } from './components/ReportExportModal';
 import { ScamAnalysisResult, CommunityReport, UserFeedback } from './types';
 import { DEMO_SCENARIOS } from './data/demoData';
 import { AlertCircle, CheckCircle, X } from 'lucide-react';
 
 export default function App() {
-  const [apiKey, setApiKey] = useState<string>(() => {
-    return localStorage.getItem('shieldai_user_key') || '';
-  });
-  const [hasServerKey, setHasServerKey] = useState<boolean>(false);
   const [inputText, setInputText] = useState<string>('');
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [imageMimeType, setImageMimeType] = useState<string>('image/png');
@@ -24,24 +23,15 @@ export default function App() {
   const [reports, setReports] = useState<CommunityReport[]>([]);
   const [feedbacks, setFeedbacks] = useState<UserFeedback[]>([]);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState<boolean>(false);
+  const [isBlacklistModalOpen, setIsBlacklistModalOpen] = useState<boolean>(false);
+  const [isHotlinesModalOpen, setIsHotlinesModalOpen] = useState<boolean>(false);
+  const [isExportReportModalOpen, setIsExportReportModalOpen] = useState<boolean>(false);
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState<boolean>(false);
   const [isReportingCommunity, setIsReportingCommunity] = useState<boolean>(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  // Save apiKey to local storage
+  // Load initial reports and feedback
   useEffect(() => {
-    if (apiKey) {
-      localStorage.setItem('shieldai_user_key', apiKey);
-    }
-  }, [apiKey]);
-
-  // Load initial config, reports, feedback
-  useEffect(() => {
-    fetch('/api/config')
-      .then((res) => res.json())
-      .then((data) => setHasServerKey(Boolean(data.hasServerKey)))
-      .catch(() => setHasServerKey(false));
-
     loadReports();
     loadFeedback();
   }, []);
@@ -102,14 +92,6 @@ export default function App() {
   const handleAnalyze = async () => {
     setErrorMsg(null);
 
-    const hasValidKey = (apiKey && apiKey.trim().length >= 15 && !apiKey.startsWith('your_')) || hasServerKey;
-    if (!hasValidKey) {
-      setErrorMsg(
-        '⚠️ Gemini API Key chưa hợp lệ! Vui lòng nhập API Key từ Google AI Studio ở thanh bên trái (Sidebar) hoặc bấm nút 🧪 Chạy thử Dữ liệu Mẫu (Demo) để trải nghiệm.'
-      );
-      return;
-    }
-
     if (!uploadedImage && !inputText.trim()) {
       setErrorMsg('⚠️ Vui lòng tải lên 1 hình ảnh hoặc nhập nội dung văn bản / đường link nghi vấn để phân tích!');
       return;
@@ -123,8 +105,7 @@ export default function App() {
         body: JSON.stringify({
           text: inputText.trim(),
           imageBase64: uploadedImage,
-          imageMimeType,
-          userApiKey: apiKey.trim()
+          imageMimeType
         })
       });
 
@@ -134,7 +115,11 @@ export default function App() {
       }
 
       setAnalysisResult(data.result);
-      showToast('Phân tích đa phương thức hoàn tất thành công!', 'success');
+      if (data.warning) {
+        showToast('Đã phân tích nhanh với ShieldAI Intelligence Core.', 'success');
+      } else {
+        showToast('Phân tích đa phương thức hoàn tất thành công!', 'success');
+      }
     } catch (err: any) {
       setErrorMsg(err.message || 'Lỗi khi gọi API phân tích');
       showToast(err.message || 'Lỗi phân tích', 'error');
@@ -234,14 +219,13 @@ export default function App() {
 
       {/* Sidebar */}
       <Sidebar
-        apiKey={apiKey}
-        setApiKey={setApiKey}
-        hasServerKey={hasServerKey}
         onLoadDemo={handleLoadDemo}
         reportCount={reports.length}
         avgRating={avgRating}
         isOpen={isSidebarOpen}
         setIsOpen={setIsSidebarOpen}
+        onOpenBlacklist={() => setIsBlacklistModalOpen(true)}
+        onOpenHotlines={() => setIsHotlinesModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -251,6 +235,10 @@ export default function App() {
           <Header
             isSidebarOpen={isSidebarOpen}
             setIsSidebarOpen={setIsSidebarOpen}
+            onOpenBlacklist={() => setIsBlacklistModalOpen(true)}
+            onOpenHotlines={() => setIsHotlinesModalOpen(true)}
+            onOpenFeedback={() => setIsFeedbackModalOpen(true)}
+            avgRating={avgRating}
           />
 
           {/* Error Banner */}
@@ -287,6 +275,10 @@ export default function App() {
               onReportCommunity={handleReportCommunity}
               onOpenFeedback={() => setIsFeedbackModalOpen(true)}
               isReporting={isReportingCommunity}
+              onOpenExportReport={() => setIsExportReportModalOpen(true)}
+              onOpenHotlines={() => setIsHotlinesModalOpen(true)}
+              onOpenBlacklist={() => setIsBlacklistModalOpen(true)}
+              showToast={showToast}
             />
           </div>
         </main>
@@ -299,6 +291,30 @@ export default function App() {
         onSubmit={handleFeedbackSubmit}
         scamType={analysisResult?.scam_type || 'Chưa phân loại'}
         isSubmitting={isSubmittingFeedback}
+      />
+
+      {/* Blacklist Lookup Modal */}
+      <BlacklistLookupModal
+        isOpen={isBlacklistModalOpen}
+        onClose={() => setIsBlacklistModalOpen(false)}
+        onShowToast={showToast}
+      />
+
+      {/* Emergency Hotlines Modal */}
+      <EmergencyHotlinesModal
+        isOpen={isHotlinesModalOpen}
+        onClose={() => setIsHotlinesModalOpen(false)}
+        onShowToast={showToast}
+      />
+
+      {/* Report & Evidence Export Modal */}
+      <ReportExportModal
+        isOpen={isExportReportModalOpen}
+        onClose={() => setIsExportReportModalOpen(false)}
+        analysisResult={analysisResult}
+        evidenceText={inputText}
+        evidenceImage={uploadedImage}
+        onShowToast={showToast}
       />
     </div>
   );

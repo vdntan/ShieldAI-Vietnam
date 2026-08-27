@@ -1,20 +1,74 @@
-import React from 'react';
-import { Shield, AlertOctagon, Brain, ShieldAlert, CheckCircle2, Flag, Star, Send } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  Shield,
+  AlertOctagon,
+  Brain,
+  ShieldAlert,
+  CheckCircle2,
+  Flag,
+  Star,
+  Send,
+  Volume2,
+  VolumeX,
+  FileDown,
+  PhoneCall,
+  Search
+} from 'lucide-react';
 import { ScamAnalysisResult } from '../types';
+import { speakAlertVietnamese } from '../utils/textToSpeech';
 
 interface AnalysisResultViewProps {
   result: ScamAnalysisResult | null;
   onReportCommunity: () => void;
   onOpenFeedback: () => void;
   isReporting: boolean;
+  onOpenExportReport?: () => void;
+  onOpenHotlines?: () => void;
+  onOpenBlacklist?: () => void;
+  showToast?: (msg: string, type: 'success' | 'error') => void;
 }
 
 export const AnalysisResultView: React.FC<AnalysisResultViewProps> = ({
   result,
   onReportCommunity,
   onOpenFeedback,
-  isReporting
+  isReporting,
+  onOpenExportReport,
+  onOpenHotlines,
+  onOpenBlacklist,
+  showToast
 }) => {
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const toggleSpeech = () => {
+    if (!result) return;
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    const speechText = `Cảnh báo an ninh mạng. Đây là dạng thủ đoạn ${result.scam_type}, mức độ nguy hiểm là ${result.risk_level}, điểm rủi ro ${result.risk_score} trên 100. Lời khuyên: ${result.advice}. Các hành động khẩn cấp cần làm: ${result.suggested_actions.join('. ')}.`;
+
+    speakAlertVietnamese(
+      speechText,
+      () => setIsSpeaking(true),
+      () => setIsSpeaking(false),
+      () => {
+        setIsSpeaking(false);
+        showToast?.('Trình duyệt không hỗ trợ phát giọng nói hoặc chưa cấp quyền âm thanh.', 'error');
+      }
+    );
+  };
+
   if (!result) {
     return (
       <div className="bg-[#1e293b] border border-[#334155] rounded-2xl p-6 md:p-8 flex flex-col items-center justify-center text-center shadow-lg min-h-[500px]">
@@ -28,10 +82,37 @@ export const AnalysisResultView: React.FC<AnalysisResultViewProps> = ({
             }}
           />
         </div>
-        <h3 className="text-xl font-bold text-cyan-400 mb-2">Sẵn sàng Phân tích Rủi ro</h3>
+        <h3 className="text-xl font-bold text-cyan-400 mb-2">Sẵn sàng Phân tích Rủi ro Đa phương thức</h3>
         <p className="text-xs md:text-sm text-slate-400 max-w-md mx-auto mb-6 leading-relaxed">
           Tải lên ảnh chụp màn hình tin nhắn, hóa đơn chuyển tiền nghi làm giả, hoặc dán đoạn văn bản/link website ở cột bên trái để Gemini AI quét toàn diện.
         </p>
+
+        {/* Quick features banner even before analysis */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full mb-6">
+          <button
+            type="button"
+            onClick={onOpenBlacklist}
+            className="p-3 bg-[#0f172a] hover:bg-[#172133] border border-rose-500/40 rounded-xl text-left transition-all group cursor-pointer"
+          >
+            <div className="flex items-center gap-2 text-rose-400 text-xs font-bold mb-1">
+              <Search className="w-4 h-4" />
+              <span>Tra Cứu STK / SĐT Đen</span>
+            </div>
+            <p className="text-[11px] text-slate-400">Kiểm tra ngay số tài khoản hoặc số điện thoại có nằm trong danh sách đen bị cộng đồng gắn cờ.</p>
+          </button>
+
+          <button
+            type="button"
+            onClick={onOpenHotlines}
+            className="p-3 bg-[#0f172a] hover:bg-[#172133] border border-emerald-500/40 rounded-xl text-left transition-all group cursor-pointer"
+          >
+            <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold mb-1">
+              <PhoneCall className="w-4 h-4" />
+              <span>Hotline Khóa Thẻ & Báo Án</span>
+            </div>
+            <p className="text-[11px] text-slate-400">Tổng đài 156 (Bộ TT&TT), A05 (Bộ Công An) và Hotline khẩn cấp các ngân hàng lớn.</p>
+          </button>
+        </div>
 
         <div className="text-left w-full bg-[#0f172a] p-4 rounded-xl border border-dashed border-[#334155] space-y-2.5">
           <div className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
@@ -43,7 +124,7 @@ export const AnalysisResultView: React.FC<AnalysisResultViewProps> = ({
             <li>Mã QR thanh toán độc hại hoặc điều hướng trang web lừa đảo.</li>
             <li>Giả danh Công an, Thuế, Ngân hàng, Bưu điện gọi điện/nhắn tin đe dọa.</li>
             <li>Bẫy tuyển Cộng tác viên online xem video, chốt đơn nhận hoa hồng.</li>
-            <li>Link nhận quà tri ân, trúng thưởng giả mạo thương hiệu lớn.</li>
+            <li>Link nhận quà tri ấn, trúng thưởng giả mạo thương hiệu lớn.</li>
           </ul>
         </div>
       </div>
@@ -70,7 +151,7 @@ export const AnalysisResultView: React.FC<AnalysisResultViewProps> = ({
   }
 
   return (
-    <div className="bg-[#1e293b] border border-[#334155] rounded-2xl p-5 md:p-6 space-y-6 shadow-xl">
+    <div className="bg-[#1e293b] border border-[#334155] rounded-2xl p-5 md:p-6 space-y-5 shadow-xl">
       {/* Top Score Display Card */}
       <div className="bg-[#0f172a] border border-[#334155] rounded-xl p-4 shadow-inner">
         <div className="flex justify-between items-start mb-3">
@@ -102,6 +183,33 @@ export const AnalysisResultView: React.FC<AnalysisResultViewProps> = ({
           <span className="text-slate-400">LOẠI HÌNH NHẬN DIỆN:</span>
           <strong className="text-cyan-400 font-bold">{result.scam_type}</strong>
         </div>
+      </div>
+
+      {/* Feature 5 & 2 Action Toolbar: Voice TTS & Export Report */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        <button
+          type="button"
+          onClick={toggleSpeech}
+          className={`flex items-center justify-center gap-2 py-2.5 px-3.5 rounded-xl text-xs font-bold border transition-all cursor-pointer shadow ${
+            isSpeaking
+              ? 'bg-amber-500 text-slate-950 border-amber-300 animate-pulse'
+              : 'bg-[#0f172a] hover:bg-[#172133] text-amber-300 border-amber-500/50 hover:border-amber-400'
+          }`}
+        >
+          {isSpeaking ? <VolumeX className="w-4 h-4 text-slate-950" /> : <Volume2 className="w-4 h-4 text-amber-400" />}
+          <span>{isSpeaking ? 'Dừng đọc cảnh báo' : '🔊 Đọc to Cảnh báo (Người cao tuổi)'}</span>
+        </button>
+
+        {onOpenExportReport && (
+          <button
+            type="button"
+            onClick={onOpenExportReport}
+            className="flex items-center justify-center gap-2 py-2.5 px-3.5 rounded-xl text-xs font-bold bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-500/50 hover:border-cyan-400 transition-all cursor-pointer shadow"
+          >
+            <FileDown className="w-4 h-4 text-cyan-400" />
+            <span>📋 Xuất Đơn Tố Giác / Bằng chứng (PDF)</span>
+          </button>
+        )}
       </div>
 
       {/* Red Flags Section */}
@@ -211,3 +319,4 @@ export const AnalysisResultView: React.FC<AnalysisResultViewProps> = ({
     </div>
   );
 };
+

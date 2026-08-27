@@ -5,6 +5,7 @@ import fs from 'fs';
 import dotenv from 'dotenv';
 import { GoogleGenAI, Type } from '@google/genai';
 import { createServer as createViteServer } from 'vite';
+import { analyzeLocally } from './src/utils/localAnalyzer.ts';
 
 dotenv.config();
 
@@ -115,15 +116,9 @@ app.post('/api/analyze', async (req, res) => {
   try {
     const { text, imageBase64, imageMimeType, userApiKey } = req.body;
 
-    const apiKey = (userApiKey && userApiKey.trim().length >= 15 && !userApiKey.startsWith('your_'))
+    let apiKey = (userApiKey && userApiKey.trim().length >= 15 && !userApiKey.startsWith('your_'))
       ? userApiKey.trim()
       : (process.env.GEMINI_API_KEY || '').trim();
-
-    if (!apiKey || apiKey.startsWith('your_') || apiKey.length < 15) {
-      return res.status(400).json({
-        error: 'Gemini API Key chưa được cung cấp hoặc không hợp lệ. Vui lòng lấy API Key miễn phí tại https://aistudio.google.com/app/apikey'
-      });
-    }
 
     if (!text && !imageBase64) {
       return res.status(400).json({
@@ -131,7 +126,23 @@ app.post('/api/analyze', async (req, res) => {
       });
     }
 
-    const ai = new GoogleGenAI({ apiKey });
+    if (!apiKey || apiKey.startsWith('your_') || apiKey.length < 15) {
+      console.log('No valid Gemini API key configured, using ShieldAI internal rule engine...');
+      const fallbackResult = analyzeLocally(text, Boolean(imageBase64));
+      return res.json({
+        result: fallbackResult,
+        warning: 'Phân tích được thực hiện bằng bộ quy tắc an ninh mạng nội bộ của ShieldAI.'
+      });
+    }
+
+    const ai = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        }
+      }
+    });
 
     const systemInstruction = 
       "Bạn là chuyên gia hàng đầu về An ninh mạng và Phòng chống Lừa đảo Trực tuyến tại Việt Nam " +
@@ -206,29 +217,50 @@ app.post('/api/analyze', async (req, res) => {
       ]
     };
 
-    const modelsToTry = ['gemini-2.5-flash', 'gemini-1.5-flash'];
+    const modelsToTry = ['gemini-3.1-flash-lite', 'gemini-3.7-flash', 'gemini-flash-latest'];
     let lastError = '';
 
     for (const model of modelsToTry) {
-      try {
-        const response = await ai.models.generateContent({
-          model,
-          contents,
-          config: {
-            systemInstruction,
-            responseMimeType: 'application/json',
-            responseSchema: scamAnalysisSchema,
-            temperature: 0.2,
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          if (attempt > 0) {
+            await new Promise((r) => setTimeout(r, 1000));
           }
-        });
 
-        const responseText = response.text || '';
-        const parsedResult = JSON.parse(responseText);
-        return res.json({ result: parsedResult });
-      } catch (err: any) {
-        console.error(`Failed with model ${model}:`, err.message);
-        lastError = err.message || String(err);
+          const response = await ai.models.generateContent({
+            model,
+            contents,
+            config: {
+              systemInstruction,
+              responseMimeType: 'application/json',
+              responseSchema: scamAnalysisSchema,
+              temperature: 0.2,
+            }
+          });
+
+          const responseText = response.text || '';
+          const parsedResult = JSON.parse(responseText);
+          return res.json({ result: parsedResult });
+        } catch (err: any) {
+          const errMsg = err.message || String(err);
+          console.error(`Attempt ${attempt + 1} with model ${model} failed:`, errMsg);
+          lastError = errMsg;
+
+          if (!errMsg.includes('503') && !errMsg.includes('429') && !errMsg.includes('UNAVAILABLE') && !errMsg.includes('high demand')) {
+            break;
+          }
+        }
       }
+    }
+
+    // If upstream cloud models encounter 503 or transient unavailability, generate resilient local analysis
+    if (lastError.includes('503') || lastError.includes('UNAVAILABLE') || lastError.includes('high demand') || lastError.includes('quota')) {
+      console.log('Falling back to local heuristic analysis due to upstream cloud high demand...');
+      const fallbackResult = analyzeLocally(text, Boolean(imageBase64));
+      return res.json({
+        result: fallbackResult,
+        warning: 'Phân tích được thực hiện qua bộ quy tắc an ninh mạng nội bộ của ShieldAI do máy chủ AI đám mây đang quá tải tạm thời.'
+      });
     }
 
     throw new Error(lastError || 'Không thể tạo phản hồi từ Gemini API');

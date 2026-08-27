@@ -1,33 +1,28 @@
 import React, { useState } from 'react';
-import { Shield, Key, Sparkles, Database, Star, CheckCircle, AlertTriangle, ExternalLink, Eye, EyeOff, Info } from 'lucide-react';
+import { Sparkles, Database, Star, Info, Search, PhoneCall, ShieldAlert } from 'lucide-react';
 import { DEMO_SCENARIOS } from '../data/demoData';
-import { ScamAnalysisResult } from '../types';
 
 interface SidebarProps {
-  apiKey: string;
-  setApiKey: (key: string) => void;
-  hasServerKey: boolean;
   onLoadDemo: (scenarioKey: string) => void;
   reportCount: number;
   avgRating: string;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
+  onOpenBlacklist: () => void;
+  onOpenHotlines: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
-  apiKey,
-  setApiKey,
-  hasServerKey,
   onLoadDemo,
   reportCount,
   avgRating,
   isOpen,
-  setIsOpen
+  setIsOpen,
+  onOpenBlacklist,
+  onOpenHotlines
 }) => {
   const [selectedDemo, setSelectedDemo] = useState<string>('fake_sms');
-  const [showKey, setShowKey] = useState<boolean>(false);
 
-  const isConnected = (apiKey && apiKey.trim().length >= 15 && !apiKey.startsWith('your_')) || hasServerKey;
 
   return (
     <aside
@@ -63,57 +58,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         <div className="h-px bg-[#334155]" />
 
-        {/* API Key Configuration */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-200">
-              <Key className="w-4 h-4 text-cyan-400" />
-              <span>Cấu hình API Key</span>
-            </div>
-            {isConnected ? (
-              <span className="flex items-center gap-1 text-[11px] font-medium text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800/60">
-                <CheckCircle className="w-3 h-3" /> Đã kết nối
-              </span>
-            ) : (
-              <span className="flex items-center gap-1 text-[11px] font-medium text-amber-400 bg-amber-950/60 px-2 py-0.5 rounded-full border border-amber-800/60">
-                <AlertTriangle className="w-3 h-3" /> Chưa nhập
-              </span>
-            )}
+        {/* Quick Tools Access */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm font-semibold text-slate-200">
+            <ShieldAlert className="w-4 h-4 text-rose-400" />
+            <span>Công cụ Hỗ trợ Khẩn cấp</span>
           </div>
 
-          <div className="relative">
-            <input
-              id="api-key-input"
-              type={showKey ? 'text' : 'password'}
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder={hasServerKey ? "Đã có sẵn Server Key (hoặc nhập thêm)" : "Dán Gemini API Key tại đây..."}
-              className="w-full bg-[#1e293b] border border-[#334155] rounded-lg px-3 py-2 pr-9 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all font-mono"
-            />
-            <button
-              type="button"
-              id="toggle-api-key-visibility"
-              onClick={() => setShowKey(!showKey)}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
-            >
-              {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onOpenBlacklist}
+            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 border border-rose-600/50 hover:border-rose-400 text-xs font-bold text-rose-300 transition-all cursor-pointer shadow-sm"
+          >
+            <Search className="w-4 h-4 text-rose-400 shrink-0" />
+            <span className="text-left">🔍 Tra Cứu STK / SĐT Đen</span>
+          </button>
 
-          <div className="flex items-center justify-between text-xs">
-            <a
-              href="https://aistudio.google.com/app/apikey"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-cyan-400 hover:text-cyan-300 hover:underline"
-            >
-              <span>Lấy API Key miễn phí</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
-            {hasServerKey && (
-              <span className="text-slate-400 text-[11px]">(Server key sẵn sàng)</span>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={onOpenHotlines}
+            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-600/50 hover:border-emerald-400 text-xs font-bold text-emerald-300 transition-all cursor-pointer shadow-sm"
+          >
+            <PhoneCall className="w-4 h-4 text-emerald-400 shrink-0 animate-pulse" />
+            <span className="text-left">📞 Hotline Khẩn Cấp (156)</span>
+          </button>
         </div>
 
         <div className="h-px bg-[#334155]" />

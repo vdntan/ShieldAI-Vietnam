@@ -1,29 +1,42 @@
-# Use official Python lightweight image
-FROM python:3.11-slim
+# Multi-stage Docker build for ShieldAI Vietnam (Node.js + React + Express)
+FROM node:20-slim AS builder
 
-# Prevent Python from writing .pyc files and buffer stdout/stderr
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-ENV PORT=8080
-
-# Set working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+# Copy dependency manifests
+COPY package*.json ./
 
-# Copy requirements and install
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install dependencies
+RUN npm ci
 
-# Copy application files
+# Copy project files
 COPY . .
 
-# Expose Streamlit port
-EXPOSE 8080
+# Build Vite frontend and bundled Express server (dist/server.cjs)
+RUN npm run build
 
-# Run Streamlit on container startup optimized for Google Cloud Run
-ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8080", "--server.address=0.0.0.0", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]
+# Production runner stage
+FROM node:20-slim AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Copy package.json for production scripts & external modules
+COPY package*.json ./
+
+# Install only production dependencies
+RUN npm ci --omit=dev
+
+# Copy compiled build output from builder
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/community_reports.json ./community_reports.json
+COPY --from=builder /app/user_feedback.json ./user_feedback.json
+
+# Expose port
+EXPOSE 3000
+
+# Start server
+CMD ["node", "dist/server.cjs"]
+
