@@ -46,7 +46,7 @@ Trong bối cảnh tội phạm lừa đảo trực tuyến tại Việt Nam ng�
 
 ## 🏗️ 3. Kiến Trúc Hệ Thống (System Architecture)
 
-
+```mermaid
 flowchart TD
     subgraph Client [Client-Side - React 18 & TypeScript]
         A[Giao diện Người dùng Web / Mobile] --> B[Bộ Thu thập Bằng chứng Multimodal]
@@ -73,7 +73,7 @@ flowchart TD
 
     C -->|POST /api/analyze| H
     L -->|Phản hồi JSON chuẩn hóa| A
-
+```
 
 ---
 
