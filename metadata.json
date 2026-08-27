@@ -1,0 +1,8 @@
+{
+  "name": "ShieldAI Vietnam",
+  "description": "Hệ thống Trí tuệ Nhân tạo Đa phương thức (Multimodal) phát hiện, phân tích rủi ro và phòng chống lừa đảo trực tuyến tại Việt Nam với Google Gemini AI",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
