@@ -48,26 +48,26 @@ Trong bối cảnh tội phạm lừa đảo trực tuyến tại Việt Nam ng�
 
 ```mermaid
 flowchart TD
-    subgraph Client [Client-Side - React 18 & TypeScript]
-        A[Giao diện Người dùng Web / Mobile] --> B[Bộ Thu thập Bằng chứng Multimodal]
-        B --> C[Tải ảnh Screenshot / Nhập Link / Text]
-        A --> D[Tra cứu STK / SĐT Đen]
-        A --> E[Hotline Khẩn cấp 1-Chạm]
-        A --> F[Trình đọc Giọng nói Cảnh báo TTS]
-        A --> G[Trình xuất Đơn Tố Giác A4 / PDF / Word]
+    subgraph Client["Client-Side - React 18 & TypeScript"]
+        A["Giao diện Người dùng Web / Mobile"] --> B["Bộ Thu thập Bằng chứng Multimodal"]
+        B --> C["Tải ảnh Screenshot / Nhập Link / Text"]
+        A --> D["Tra cứu STK / SĐT Đen"]
+        A --> E["Hotline Khẩn cấp 1-Chạm"]
+        A --> F["Trình đọc Giọng nói Cảnh báo TTS"]
+        A --> G["Trình xuất Đơn Tố Giác A4 / PDF / Word"]
     end
 
-    subgraph Server [Server-Side - Node.js Express API]
-        H[/api/analyze] --> I{Kiểm tra Gemini API Key}
-        I -->|Có Key| J[Google GenAI SDK - gemini-2.5-flash]
-        I -->|Không có Key / Lỗi mạng| K[Local Fallback Rule Engine]
-        J --> L[Structured JSON Output]
+    subgraph Server["Server-Side - Node.js Express API"]
+        H["API Endpoint: /api/analyze"] --> I{"Kiểm tra Gemini API Key"}
+        I -->|Có Key| J["Google GenAI SDK - gemini-2.5-flash"]
+        I -->|Không có Key / Lỗi mạng| K["Local Fallback Rule Engine"]
+        J --> L["Structured JSON Output"]
         K --> L
-        H2[/api/community-reports] --> M[(CSDL Báo cáo & Phản hồi)]
+        H2["API Endpoint: /api/community-reports"] --> M[("CSDL Báo cáo & Phản hồi")]
     end
 
-    subgraph AI [Google Cloud & Gemini Model]
-        J --> N[Gemini 2.5 Flash Vision & Text]
+    subgraph AI["Google Cloud & Gemini Model"]
+        J --> N["Gemini 2.5 Flash Vision & Text"]
         N -->|Trích xuất OCR & Phân tích tâm lý| J
     end
 
