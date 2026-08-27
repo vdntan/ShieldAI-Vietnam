@@ -1,0 +1,22 @@
+# Environment & Sensitive Keys
+.env
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+
+# OS Specific Files
+.DS_Store
+Thumbs.db
+
+# Streamlit Local Configurations
+.streamlit/secrets.toml
